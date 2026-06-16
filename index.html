@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gym Tracker">
+<meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Gym Tracker – Halbmarathon 2026</title>
+<style>
+:root {
+  --push:       #E53935;
+  --push-glow:  #7a1a1a;
+  --push-soft:  #2a1010;
+  --pull:       #1976D2;
+  --pull-glow:  #0d3070;
+  --pull-soft:  #0d1f3c;
+  --full:       #2E7D32;
+  --full-glow:  #1a4d1d;
+  --full-soft:  #0d2b18;
+  --bg:         #0f1117;
+  --surf:       #181c27;
+  --surf2:      #1e2336;
+  --border:     #2a2f45;
+  --text:       #e8eaf0;
+  --muted:      #6b7394;
+  --accent:     #f5a623;
+  --green:      #2a7d3f;
+  --r:          14px;
+  --safe-top:   env(safe-area-inset-top, 0px);
+  --safe-bot:   env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ── HEADER ── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(15,17,23,0.94);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  padding-top: calc(var(--safe-top) + 10px);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner { padding: 0 16px 10px; }
+.header-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.app-title { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
+.race-badge {
+  background: var(--accent); color: #000;
+  font-size: 11px; font-weight: 800;
+  padding: 3px 9px; border-radius: 20px;
+}
+.countdown { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.countdown span { color: var(--accent); font-weight: 700; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(15,17,23,0.96);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bot);
+  display: flex;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px;
+  padding: 10px 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.nav-btn.active-push { color: var(--push); }
+.nav-btn.active-pull { color: var(--pull); }
+.nav-btn.active-full { color: var(--full); }
+.nav-icon { font-size: 22px; line-height: 1; }
+.nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ── SCROLL AREA ── */
+.scroll-area {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: calc(var(--safe-top) + 88px);
+  padding-bottom: calc(var(--safe-bot) + 70px);
+}
+
+/* ── PAGE ── */
+.page { display: none; padding: 14px 14px 0; max-width: 520px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ── DAY BANNER ── */
+.day-banner {
+  border-radius: var(--r); padding: 16px;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 14px;
+}
+.day-banner.push { background: linear-gradient(135deg, var(--push-soft), #3d1010); border: 1px solid #5c1c1c; }
+.day-banner.pull { background: linear-gradient(135deg, var(--pull-soft), #1a2d5c); border: 1px solid #1e3c80; }
+.day-banner.full { background: linear-gradient(135deg, var(--full-soft), #1a3a1d); border: 1px solid #235c27; }
+.day-emoji { font-size: 36px; }
+.day-text h2 { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+.day-text p { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; line-height: 1.4; }
+
+/* ── PROGRESS SUMMARY ── */
+.progress-row {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 14px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 14px;
+}
+.prog-stats { display: flex; gap: 18px; }
+.prog-stat { text-align: center; }
+.prog-val { font-size: 22px; font-weight: 800; }
+.prog-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; }
+.push .prog-val { color: var(--push); }
+.pull .prog-val { color: var(--pull); }
+.full .prog-val { color: var(--full); }
+.reset-btn {
+  margin-left: auto; background: var(--surf2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted); font-family: inherit;
+  font-size: 11px; font-weight: 600; padding: 7px 11px; cursor: pointer;
+}
+
+.prog-bar-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.prog-bar { flex: 1; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.prog-fill.push { background: var(--push); }
+.prog-fill.pull { background: var(--pull); }
+.prog-fill.full { background: var(--full); }
+.prog-pct { font-size: 11px; color: var(--muted); min-width: 32px; text-align: right; }
+
+/* ── SECTION LABEL ── */
+.sec-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--muted);
+  margin: 20px 0 8px 2px;
+}
+
+/* ── EXERCISE CARD ── */
+.ex-card {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r); margin-bottom: 8px; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.ex-card.done { border-color: #2a5c35; }
+.ex-card.done .ex-head { background: #111e14; }
+
+.ex-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 13px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.ex-circle {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.2s; font-size: 12px; font-weight: 700;
+}
+.ex-card.done .ex-circle { background: var(--green); border-color: var(--green); color: #fff; }
+.ex-title { flex: 1; min-width: 0; }
+.ex-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.ex-chips {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
+}
+.chip {
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  background: var(--surf2); border-radius: 5px;
+  padding: 2px 6px;
+}
+.ex-chevron { color: var(--muted); font-size: 14px; flex-shrink: 0; transition: transform 0.2s; }
+.ex-card.open .ex-chevron { transform: rotate(180deg); }
+
+/* ── SETS PANEL ── */
+.sets-panel { display: none; padding: 0 13px 13px; border-top: 1px solid var(--border); }
+.ex-card.open .sets-panel { display: block; }
+
+.info-strip {
+  background: var(--surf2); border-radius: 8px;
+  padding: 9px 11px; margin: 10px 0 12px;
+  font-size: 12px; color: var(--muted); line-height: 1.55;
+}
+.info-strip strong { color: rgba(255,255,255,0.7); font-weight: 600; }
+
+.sets-head {
+  display: grid; grid-template-columns: 26px 1fr 1fr 1fr;
+  gap: 6px; margin-bottom: 5px;
+}
+.sets-head span {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--muted); text-align: center;
+}
+.set-row {
+  display: grid; grid-template-columns: 26px 1fr 1fr 1fr;
+  gap: 6px; align-items: center; margin-bottom: 6px;
+}
+.set-n { font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; }
+
+.set-inp {
+  background: var(--surf2); border: 1.5px solid var(--border);
+  border-radius: 9px; color: var(--text);
+  font-family: -apple-system, inherit; font-size: 16px; font-weight: 600;
+  text-align: center; padding: 9px 4px; width: 100%;
+  -moz-appearance: textfield; outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-appearance: none;
+}
+.set-inp::-webkit-outer-spin-button,
+.set-inp::-webkit-inner-spin-button { -webkit-appearance: none; }
+.set-inp:focus { border-color: var(--accent); background: #1e2030; }
+.set-inp.filled { border-color: #2a6b3a; background: #111e14; }
+.set-inp::placeholder { color: #3a3f58; font-size: 13px; font-weight: 400; }
+
+.done-btn {
+  width: 100%; padding: 11px; border-radius: 9px;
+  border: 1.5px solid var(--border); background: var(--surf2);
+  color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; margin-top: 6px; transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.done-btn.marked { background: #1a3020; border-color: var(--green); color: #5adb7a; }
+
+/* ── HISTORY VIEW ── */
+#page-history .hist-day {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r); margin-bottom: 10px; overflow: hidden;
+}
+#page-history .hist-day-head {
+  padding: 12px 14px; font-weight: 700; font-size: 14px;
+  border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;
+}
+#page-history .hist-entry {
+  padding: 8px 14px; font-size: 12px; color: var(--muted);
+  border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;
+}
+#page-history .hist-entry:last-child { border-bottom: none; }
+#page-history .hist-entry .ex { color: var(--text); font-weight: 500; flex: 1; }
+#page-history .hist-entry .sets-summary { text-align: right; font-size: 11px; }
+.no-history { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; }
+
+/* ── HAPTIC-FEEL ACTIVE STATES ── */
+.ex-head:active { opacity: 0.75; }
+.done-btn:active { transform: scale(0.98); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-row">
+      <div class="app-title">🏋️ Gym Tracker</div>
+      <div class="race-badge">🏅 06. Sep 2026</div>
+    </div>
+    <div class="countdown">Noch <span id="days-left">–</span> Tage bis zum Halbmarathon</div>
+  </div>
+</div>
+
+<!-- SCROLL AREA -->
+<div class="scroll-area">
+
+  <!-- PUSH PAGE -->
+  <div id="page-push" class="page active">
+    <div class="day-banner push">
+      <div class="day-emoji">🔴</div>
+      <div class="day-text">
+        <h2>PUSH</h2>
+        <p>Montag · Brust · Schulter · Trizeps · Quads</p>
+      </div>
+    </div>
+    <div class="progress-row push" id="push-summary">
+      <div class="prog-stats">
+        <div class="prog-stat"><div class="prog-val" id="push-done">0</div><div class="prog-lbl">Erledigt</div></div>
+        <div class="prog-stat"><div class="prog-val" id="push-total">0</div><div class="prog-lbl">Gesamt</div></div>
+      </div>
+      <button class="reset-btn" onclick="resetDay('push')">Zurücksetzen</button>
+    </div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar"><div class="prog-fill push" id="push-bar" style="width:0%"></div></div>
+      <div class="prog-pct" id="push-pct">0%</div>
+    </div>
+    <div id="push-content"></div>
+  </div>
+
+  <!-- PULL PAGE -->
+  <div id="page-pull" class="page">
+    <div class="day-banner pull">
+      <div class="day-emoji">🔵</div>
+      <div class="day-text">
+        <h2>PULL</h2>
+        <p>Mittwoch · Rücken · Bizeps · Ischios · Hintere Kette</p>
+      </div>
+    </div>
+    <div class="progress-row pull" id="pull-summary">
+      <div class="prog-stats">
+        <div class="prog-stat"><div class="prog-val" id="pull-done">0</div><div class="prog-lbl">Erledigt</div></div>
+        <div class="prog-stat"><div class="prog-val" id="pull-total">0</div><div class="prog-lbl">Gesamt</div></div>
+      </div>
+      <button class="reset-btn" onclick="resetDay('pull')">Zurücksetzen</button>
+    </div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar"><div class="prog-fill pull" id="pull-bar" style="width:0%"></div></div>
+      <div class="prog-pct" id="pull-pct">0%</div>
+    </div>
+    <div id="pull-content"></div>
+  </div>
+
+  <!-- FULLBODY PAGE -->
+  <div id="page-full" class="page">
+    <div class="day-banner full">
+      <div class="day-emoji">🟢</div>
+      <div class="day-text">
+        <h2>FULLBODY</h2>
+        <p>Freitag · Ganzkörper · Unilateral · Laufstabilität</p>
+      </div>
+    </div>
+    <div class="progress-row full" id="full-summary">
+      <div class="prog-stats">
+        <div class="prog-stat"><div class="prog-val" id="full-done">0</div><div class="prog-lbl">Erledigt</div></div>
+        <div class="prog-stat"><div class="prog-val" id="full-total">0</div><div class="prog-lbl">Gesamt</div></div>
+      </div>
+      <button class="reset-btn" onclick="resetDay('full')">Zurücksetzen</button>
+    </div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar"><div class="prog-fill full" id="full-bar" style="width:0%"></div></div>
+      <div class="prog-pct" id="full-pct">0%</div>
+    </div>
+    <div id="full-content"></div>
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div id="page-history" class="page">
+    <div style="padding: 4px 0 16px; font-size: 18px; font-weight: 700; letter-spacing: -0.4px;">📊 Verlauf</div>
+    <div id="history-content"></div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-btn active-push" id="nav-push" onclick="showPage('push')">
+    <span class="nav-icon">🔴</span>
+    <span class="nav-label">Push</span>
+  </button>
+  <button class="nav-btn" id="nav-pull" onclick="showPage('pull')">
+    <span class="nav-icon">🔵</span>
+    <span class="nav-label">Pull</span>
+  </button>
+  <button class="nav-btn" id="nav-full" onclick="showPage('full')">
+    <span class="nav-icon">🟢</span>
+    <span class="nav-label">Fullbody</span>
+  </button>
+  <button class="nav-btn" id="nav-history" onclick="showPage('history')">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Verlauf</span>
+  </button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+const DAYS = {
+  push: { color:'push', label:'PUSH – Montag', sections:[
+    { label:'🔥 Warm-Up', exercises:[
+      {id:'p1', name:'AssaultBike / Ruder', sets:1, reps:'5 Min', rest:'–', muscle:'Ganzkörper', cue:'Locker, Puls ~120 – nicht mit Vollgas rein', timed:true},
+      {id:'p2', name:'Band Pull-Apart', sets:3, reps:'15', rest:'–', muscle:'Rotatorenm.', cue:'Arme gestreckt, Brusthöhe. Auch beim Push-Tag wichtig!', timed:true},
+      {id:'p3', name:'Schulterkreisen + Armswings', sets:2, reps:'10/Richtg.', rest:'–', muscle:'Schultergelenk', cue:'Groß und kontrolliert, beide Richtungen', timed:true},
+      {id:'p4', name:'Goblet Squat (leicht)', sets:2, reps:'10', rest:'–', muscle:'Knie, Hüfte, Knöchel', cue:'Tiefe Hocke, Fersen am Boden', timed:true},
+    ]},
+    { label:'💪 Block 1 – Hauptübungen', exercises:[
+      {id:'p5', name:'★ Bankdrücken – Barbell', sets:4, reps:'6–10', rest:'90 Sek', muscle:'Brust, Schulter, Trizeps', cue:'Ellbogen ~75° zum Körper, 3 Sek kontrolliert runter'},
+      {id:'p6', name:'★ Overhead Press – stehend', sets:4, reps:'6–10', rest:'90 Sek', muscle:'Schulter, Trizeps, Core', cue:'Kern hart anspannen, Rippen runter – kein Hohlkreuz'},
+      {id:'p7', name:'★ Kniebeuge – Back Squat', sets:4, reps:'8–12', rest:'90 Sek', muscle:'Quads, Gesäß, Core', cue:'Oberschenkel mind. parallel, Knie über 2. Zehe'},
+    ]},
+    { label:'🔧 Block 2 – Nebenübungen', exercises:[
+      {id:'p8', name:'KH Schrägbank Drücken 30°', sets:3, reps:'10–12', rest:'60 Sek', muscle:'Obere Brust, vord. Schulter', cue:'Ellbogen leicht nach innen, Stretch am unteren Punkt'},
+      {id:'p9', name:'KH Seitheben', sets:3, reps:'15', rest:'45 Sek', muscle:'Mittlere Schulter', cue:'Kein Schwung, Ellbogen leicht gebeugt'},
+      {id:'p10', name:'Trizeps Dips / Pushdown Kabel', sets:3, reps:'10–12', rest:'60 Sek', muscle:'Trizeps', cue:'Volle Streckung am Ende, langsam beugen'},
+      {id:'p11', name:'Beinpresse (Maschine)', sets:3, reps:'12–15', rest:'60 Sek', muscle:'Quads, Gesäß', cue:'Füße hüftbreit, Knie nicht zusammenfallen lassen'},
+      {id:'p12', name:'Wadenheben auf Stufe', sets:3, reps:'15', rest:'45 Sek', muscle:'Waden (Gastrocnemius)', cue:'3 Sek exzentrisch senken – Achilles Prävention!'},
+    ]},
+    { label:'🔩 Core – Anti-Extension', exercises:[
+      {id:'p13', name:'Plank Unterarm', sets:3, reps:'45–60 Sek', rest:'30 Sek', muscle:'Gesamter Core', cue:'Becken neutral, Gesäß angespannt, kein Hochstrecken', timed:true},
+      {id:'p14', name:'Dead Bug', sets:3, reps:'8/Seite', rest:'30 Sek', muscle:'Tiefer Core, Koordination', cue:'Lendenwirbel bleibt IMMER am Boden', timed:true},
+      {id:'p15', name:'Ab Wheel Rollout', sets:3, reps:'8–12', rest:'45 Sek', muscle:'Tiefer Core, Lats', cue:'Hüfte am Ende vorschieben – nicht durchhängen', timed:true},
+    ]},
+    { label:'🧘 Cool-Down', exercises:[
+      {id:'p16', name:'Doorway Chest Stretch', sets:2, reps:'45 Sek/S', rest:'–', muscle:'Brust, vord. Schulter', cue:'Arm 90° an Türrahmen, leicht nach vorne drehen', timed:true},
+      {id:'p17', name:'Couch Stretch', sets:2, reps:'60 Sek/S', rest:'–', muscle:'Hüftflexoren, Quads', cue:'Becken kippen, Gesäß anspannen für maximalen Stretch', timed:true},
+    ]},
+  ]},
+
+  pull: { color:'pull', label:'PULL – Mittwoch', sections:[
+    { label:'🔥 Warm-Up', exercises:[
+      {id:'pu1', name:'Ruderergometer', sets:1, reps:'5 Min', rest:'–', muscle:'Ganzkörper, Rücken', cue:'Locker, Fokus auf Schulterblatt-Bewegung', timed:true},
+      {id:'pu2', name:'Cat-Cow + Thor. Rotation', sets:2, reps:'10 + 8/S', rest:'–', muscle:'Wirbelsäule, T-Spine', cue:'Ellbogen zur Decke bei der Rotation', timed:true},
+      {id:'pu3', name:'Hip Hinge mit Stab', sets:2, reps:'10', rest:'–', muscle:'Hinge-Muster', cue:'Stab berührt Hinterkopf, Schulterblätter & Ferse', timed:true},
+      {id:'pu4', name:'Face Pull (leicht, Aktivierung)', sets:2, reps:'15', rest:'–', muscle:'Rotatorenmanschette', cue:'Schulterblätter aktiv zusammenziehen', timed:true},
+    ]},
+    { label:'💪 Block 1 – Hauptübungen', exercises:[
+      {id:'pu5', name:'★ Kreuzheben – Konventionell', sets:4, reps:'5–8', rest:'2 Min', muscle:'Rücken, Ischios, Gesäß, Grip', cue:'Schultern leicht vor der Stange, Lats einspannen vor dem Zug'},
+      {id:'pu6', name:'★ Klimmzüge / Lat-Pulldown', sets:4, reps:'6–10', rest:'90 Sek', muscle:'Latissimus, Bizeps, Rhomboiden', cue:'Brust zur Stange, Ellbogen nach unten-hinten ziehen'},
+      {id:'pu7', name:'★ LH-Rudern – Bent Over Row', sets:4, reps:'8–10', rest:'90 Sek', muscle:'Mittlerer Rücken, Traps, Bizeps', cue:'OKörper 45°, Stange zur Hüfte, Schulterbl. quetschen'},
+    ]},
+    { label:'🔧 Block 2 – Nebenübungen', exercises:[
+      {id:'pu8', name:'Romanian Deadlift (RDL)', sets:3, reps:'10–12', rest:'60 Sek', muscle:'Ischios, Gesäß, unt. Rücken', cue:'Hüfte zurück bis Dehnung im Ischios spürbar, Rücken gerade'},
+      {id:'pu9', name:'Seilzugrudern (seated cable)', sets:3, reps:'12–15', rest:'60 Sek', muscle:'Mittlerer Rücken, Rhomboiden', cue:'Schulterblätter AM ENDE aktiv zusammen – nicht schwingen'},
+      {id:'pu10', name:'Face Pull (Kabelzug)', sets:3, reps:'20', rest:'45 Sek', muscle:'Hint. Schulter, Rotatorenm.', cue:'Daumen nach oben, Ellbogen hoch – Schultergesundheit!'},
+      {id:'pu11', name:'Bizepscurls KH – Hammer Grip', sets:3, reps:'12', rest:'45 Sek', muscle:'Bizeps, Brachialis', cue:'Ellbogen fixiert an der Hüfte, volle Amplitude'},
+      {id:'pu12', name:'Beinbeuger Maschine (liegend)', sets:3, reps:'12–15', rest:'60 Sek', muscle:'Ischios', cue:'Volle Bewegungsamplitude, kontrolliert strecken'},
+    ]},
+    { label:'🔩 Core – Rotation & Anti-Flexion', exercises:[
+      {id:'pu13', name:'Cable Woodchop (hoch → tief)', sets:3, reps:'12/Seite', rest:'30 Sek', muscle:'Obliques, Rotationscore', cue:'Hüfte dreht mit – nicht nur die Arme bewegen', timed:true},
+      {id:'pu14', name:'Pallof Press (Kabelzug)', sets:3, reps:'12/Seite', rest:'30 Sek', muscle:'Anti-Rotation, seitl. Core', cue:'Langsam raus- und reindrücken, kein Schwingen', timed:true},
+      {id:'pu15', name:'Hanging Leg Raise', sets:3, reps:'12–15', rest:'45 Sek', muscle:'Hüftflexoren, Bauch', cue:'Beine kontrolliert senken – absolut kein Schwingen', timed:true},
+    ]},
+    { label:'🧘 Cool-Down', exercises:[
+      {id:'pu16', name:'Lat-Stretch (Kabelturm hängen)', sets:2, reps:'30 Sek/S', rest:'–', muscle:'Latissimus', cue:'Seitlich lehnen, tief in den Stretch atmen', timed:true},
+      {id:'pu17', name:'Hamstring Stretch (Band)', sets:2, reps:'60 Sek/S', rest:'–', muscle:'Ischiocrurales', cue:'Bein gestreckt halten, sanfter Zug mit Band/Handtuch', timed:true},
+      {id:'pu18', name:'Kindhaltung (Child\'s Pose)', sets:1, reps:'60 Sek', rest:'–', muscle:'Rücken, Hüfte, Schulter', cue:'Arme ausgestreckt, tief und langsam atmen', timed:true},
+    ]},
+  ]},
+
+  full: { color:'full', label:'FULLBODY – Freitag', sections:[
+    { label:'🔥 Warm-Up', exercises:[
+      {id:'f1', name:'Foam Rolling: Wade, IT-Band, Gesäß', sets:1, reps:'60 Sek/Bereich', rest:'–', muscle:'Faszien', cue:'Schmerzhafte Stellen langsam abrollen, nicht drüberrollen', timed:true},
+      {id:'f2', name:'90/90 Hip Mobility (aktiv)', sets:2, reps:'8/Seite', rest:'–', muscle:'Hüftrotation', cue:'Aktiv von Position zu Position – beide Richtungen', timed:true},
+      {id:'f3', name:'Band Clamshells', sets:2, reps:'15/Seite', rest:'–', muscle:'Glut. medius Aktivierung', cue:'Ferse bleibt unten, nur Hüfte dreht auf', timed:true},
+      {id:'f4', name:'Hüftzirkel auf Händen & Knien', sets:2, reps:'10/Seite', rest:'–', muscle:'Hüftgelenk', cue:'Kreise groß machen, kontrolliert und bewusst', timed:true},
+    ]},
+    { label:'💪 Block 1 – 1× Ziehen + 1× Drücken', exercises:[
+      {id:'f5', name:'★ Hip Thrust – Barbell / Maschine', sets:4, reps:'10–12', rest:'60 Sek', muscle:'Gesäß (maximale Aktivierung)', cue:'1 Sek squeeze oben halten, Beckenkippe am Top'},
+      {id:'f6', name:'★ KH Schulterdrücken (sitzend)', sets:3, reps:'10–12', rest:'60 Sek', muscle:'Schulter, Trizeps', cue:'Leichter als Montag! Fokus auf Technik & Kontrolle'},
+      {id:'f7', name:'★ Seilzugrudern / KH Einarmrudern', sets:3, reps:'12/Seite', rest:'60 Sek', muscle:'Mittlerer Rücken, Bizeps', cue:'Schulterblatt am Ende aktiv zusammenziehen'},
+    ]},
+    { label:'🔧 Block 2 – Unilateral & Laufstabilität', exercises:[
+      {id:'f8', name:'Single-Leg Deadlift (KH, leicht)', sets:3, reps:'10/Seite', rest:'60 Sek', muscle:'Ischios, Gesäß, Balance', cue:'Laufspezifisch! Standbein leicht gebeugt, sehr langsam'},
+      {id:'f9', name:'Step-Up auf Box (KH, moderat)', sets:3, reps:'10/Seite', rest:'60 Sek', muscle:'Quads, Gesäß, Knie-Stab.', cue:'Knie über 2. Zehe, Oberkörper aufrecht bleiben'},
+      {id:'f10', name:'Terminal Knee Extension (Band)', sets:3, reps:'15/Seite', rest:'45 Sek', muscle:'VMO, Knie-Kontrolle', cue:'Langsame Streckung – schützt Knie beim Laufen!', timed:true},
+      {id:'f11', name:'Hip Abduktion seitlich (Band)', sets:3, reps:'15/Seite', rest:'45 Sek', muscle:'Glut. medius', cue:'ITB-Syndrom Prävention – unverzichtbar für Läufer!', timed:true},
+    ]},
+    { label:'🔩 Lauf-Prävention', exercises:[
+      {id:'f12', name:'Exzentrische Calf Raises (Stufe)', sets:3, reps:'15', rest:'30 Sek', muscle:'Waden, Achillessehne', cue:'3 Sek senken – wichtigste Übung gegen Achillesprobleme', timed:true},
+      {id:'f13', name:'Tibialis Raise (an der Wand)', sets:3, reps:'20', rest:'30 Sek', muscle:'Schienbein-Muskel', cue:'Schienbeinkantensyndrom-Prävention!', timed:true},
+      {id:'f14', name:'Copenhagen Plank', sets:3, reps:'20–30 Sek/S', rest:'30 Sek', muscle:'Adduktoren, seitl. Core', cue:'Hüfte oben, Körper gerade wie ein Brett', timed:true},
+    ]},
+    { label:'🧘 Mobility-Abschluss', exercises:[
+      {id:'f15', name:'Kniender Hüftbeuger-Stretch', sets:2, reps:'60 Sek/S', rest:'–', muscle:'Hüftflexoren, Psoas', cue:'Gesäß anspannen für echten Stretch – Beckenkippe!', timed:true},
+      {id:'f16', name:'Thor. Extension (Foam Roller)', sets:2, reps:'60 Sek', rest:'–', muscle:'Brustwirbelsäule', cue:'Arme hinter Kopf, langsam von Segment zu Segment', timed:true},
+      {id:'f17', name:'Fußsohlen-Massage (Lacrosse-Ball)', sets:1, reps:'60 Sek/Fuß', rest:'–', muscle:'Plantarfaszie', cue:'Präventiv gegen Fersensporn – nicht weglassen!', timed:true},
+      {id:'f18', name:'Atemübung (diaphragmatisch)', sets:1, reps:'2 Min', rest:'–', muscle:'Parasympathikus, Recovery', cue:'4 Sek ein – 6 Sek aus. Bauch hebt sich zuerst.', timed:true},
+    ]},
+  ]},
+};
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+function load() { try { return JSON.parse(localStorage.getItem('gym2026v2') || '{}'); } catch(e) { return {}; } }
+function save(s) { try { localStorage.setItem('gym2026v2', JSON.stringify(s)); } catch(e) {} }
+let S = load();
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+function renderDay(day) {
+  const data = DAYS[day];
+  const cont = document.getElementById(day + '-content');
+  cont.innerHTML = '';
+
+  data.sections.forEach(sec => {
+    const lbl = document.createElement('div');
+    lbl.className = 'sec-label';
+    lbl.textContent = sec.label;
+    cont.appendChild(lbl);
+    sec.exercises.forEach(ex => cont.appendChild(buildCard(day, ex)));
+  });
+
+  updateProgress(day);
+}
+
+function buildCard(day, ex) {
+  const key = `${day}_${ex.id}`;
+  const saved = S[key] || {};
+  const isDone = !!saved.done;
+
+  const card = document.createElement('div');
+  card.className = 'ex-card' + (isDone ? ' done' : '');
+  card.id = 'card-' + key;
+
+  // HEAD
+  const head = document.createElement('div');
+  head.className = 'ex-head';
+  head.innerHTML = `
+    <div class="ex-circle">${isDone ? '✓' : ''}</div>
+    <div class="ex-title">
+      <div class="ex-name">${ex.name}</div>
+      <div class="ex-chips">
+        <span class="chip">🔁 ${ex.sets} Sätze</span>
+        <span class="chip">📊 ${ex.reps}</span>
+        ${ex.rest !== '–' ? `<span class="chip">⏱ ${ex.rest}</span>` : ''}
+      </div>
+    </div>
+    <div class="ex-chevron">⌄</div>
+  `;
+  head.addEventListener('click', () => card.classList.toggle('open'));
+
+  // PANEL
+  const panel = document.createElement('div');
+  panel.className = 'sets-panel';
+
+  const info = document.createElement('div');
+  info.className = 'info-strip';
+  info.innerHTML = `<strong>💪 ${ex.muscle}</strong><br>💡 ${ex.cue}`;
+  panel.appendChild(info);
+
+  if (!ex.timed) {
+    // Weighted sets: kg / Wdh / RIR
+    const sh = document.createElement('div');
+    sh.className = 'sets-head';
+    sh.innerHTML = '<span></span><span>KG</span><span>Wdh</span><span>RIR</span>';
+    panel.appendChild(sh);
+
+    for (let i = 1; i <= ex.sets; i++) {
+      const savedSet = (saved.sets || {})[`s${i}`] || {};
+      const row = document.createElement('div');
+      row.className = 'set-row';
+
+      const n = document.createElement('div');
+      n.className = 'set-n';
+      n.textContent = i;
+      row.appendChild(n);
+
+      ['kg','wdh','rir'].forEach(field => {
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.inputMode = field === 'rir' ? 'numeric' : 'decimal';
+        inp.placeholder = field === 'kg' ? 'kg' : field === 'wdh' ? 'Wdh' : 'RIR';
+        inp.value = savedSet[field] || '';
+        inp.className = 'set-inp' + (savedSet[field] ? ' filled' : '');
+        inp.addEventListener('focus', () => inp.select());
+        inp.addEventListener('blur', () => {
+          const st = load();
+          if (!st[key]) st[key] = {};
+          if (!st[key].sets) st[key].sets = {};
+          if (!st[key].sets[`s${i}`]) st[key].sets[`s${i}`] = {};
+          st[key].sets[`s${i}`][field] = inp.value;
+          inp.classList.toggle('filled', !!inp.value);
+
+          // Auto-done when all KG filled
+          const allKg = Array.from({length: ex.sets}, (_,j) =>
+            (st[key]?.sets?.[`s${j+1}`]?.kg || '').toString().trim()
+          ).every(v => v !== '');
+          st[key].done = allKg;
+          save(st); S = st;
+          const c = document.getElementById('card-' + key);
+          if (c) {
+            c.classList.toggle('done', allKg);
+            c.querySelector('.ex-circle').textContent = allKg ? '✓' : '';
+          }
+          updateProgress(day);
+          if (allKg) saveToHistory(day, ex, st[key]);
+        });
+        row.appendChild(inp);
+      });
+      panel.appendChild(row);
+    }
+  } else {
+    // Timed / bodyweight
+    const btn = document.createElement('button');
+    btn.className = 'done-btn' + (isDone ? ' marked' : '');
+    btn.textContent = isDone ? '✓ Erledigt' : 'Als erledigt markieren';
+    btn.addEventListener('click', () => {
+      const st = load();
+      if (!st[key]) st[key] = {};
+      st[key].done = !st[key].done;
+      save(st); S = st;
+      const c = document.getElementById('card-' + key);
+      c.classList.toggle('done', st[key].done);
+      c.querySelector('.ex-circle').textContent = st[key].done ? '✓' : '';
+      btn.className = 'done-btn' + (st[key].done ? ' marked' : '');
+      btn.textContent = st[key].done ? '✓ Erledigt' : 'Als erledigt markieren';
+      updateProgress(day);
+    });
+    panel.appendChild(btn);
+  }
+
+  card.appendChild(head);
+  card.appendChild(panel);
+  return card;
+}
+
+function updateProgress(day) {
+  const data = DAYS[day];
+  let total = 0, done = 0;
+  data.sections.forEach(s => s.exercises.forEach(ex => {
+    total++;
+    if ((S[`${day}_${ex.id}`] || {}).done) done++;
+  }));
+  document.getElementById(day+'-done').textContent = done;
+  document.getElementById(day+'-total').textContent = total;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById(day+'-bar').style.width = pct+'%';
+  document.getElementById(day+'-pct').textContent = pct+'%';
+}
+
+function resetDay(day) {
+  if (!confirm(`Alle Einträge für ${DAYS[day].label} löschen?`)) return;
+  const st = load();
+  Object.keys(st).forEach(k => { if (k.startsWith(day+'_')) delete st[k]; });
+  save(st); S = st;
+  renderDay(day);
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════
+function saveToHistory(day, ex, exState) {
+  const hist = JSON.parse(localStorage.getItem('gym2026hist') || '[]');
+  const dateStr = new Date().toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const entry = {
+    date: dateStr,
+    day, exId: ex.id, name: ex.name,
+    sets: exState.sets || {}
+  };
+  // remove previous entry for same day+ex today
+  const filtered = hist.filter(h => !(h.date === dateStr && h.day === day && h.exId === ex.id));
+  filtered.unshift(entry);
+  localStorage.setItem('gym2026hist', JSON.stringify(filtered.slice(0, 500)));
+}
+
+function renderHistory() {
+  const cont = document.getElementById('history-content');
+  const hist = JSON.parse(localStorage.getItem('gym2026hist') || '[]');
+  if (!hist.length) {
+    cont.innerHTML = '<div class="no-history">Noch keine Einträge.<br><br>Sobald du Gewichte einträgst,<br>erscheinen sie hier.</div>';
+    return;
+  }
+  // Group by date+day
+  const groups = {};
+  hist.forEach(h => {
+    const gk = h.date + '_' + h.day;
+    if (!groups[gk]) groups[gk] = { date: h.date, day: h.day, entries: [] };
+    groups[gk].entries.push(h);
+  });
+
+  cont.innerHTML = '';
+  Object.values(groups).forEach(g => {
+    const block = document.createElement('div');
+    block.className = 'hist-day';
+    const dayLabel = {push:'🔴 Push', pull:'🔵 Pull', full:'🟢 Fullbody'}[g.day];
+    block.innerHTML = `<div class="hist-day-head"><span>${g.date}</span><span>${dayLabel}</span></div>`;
+    g.entries.forEach(e => {
+      const setsArr = Object.values(e.sets || {});
+      const summary = setsArr.filter(s => s.kg).map(s => `${s.kg}kg×${s.wdh||'–'}`).join(' · ') || '–';
+      const row = document.createElement('div');
+      row.className = 'hist-entry';
+      row.innerHTML = `<span class="ex">${e.name}</span><span class="sets-summary">${summary}</span>`;
+      block.appendChild(row);
+    });
+    cont.appendChild(block);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+let currentPage = 'push';
+
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+
+  const navIds = ['push','pull','full','history'];
+  navIds.forEach(id => {
+    const btn = document.getElementById('nav-' + id);
+    btn.className = 'nav-btn';
+    if (id === page) btn.classList.add('active-' + page);
+  });
+
+  if (page === 'history') renderHistory();
+  currentPage = page;
+
+  // Scroll to top
+  document.querySelector('.scroll-area').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════
+// COUNTDOWN
+// ═══════════════════════════════════════════════════════
+function updateCountdown() {
+  const race = new Date('2026-09-06');
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const diff = Math.ceil((race - today) / 86400000);
+  document.getElementById('days-left').textContent = diff > 0 ? diff : '🏅 Renntag!';
+}
+
+// ═══════════════════════════════════════════════════════
+// SERVICE WORKER
+// ═══════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+updateCountdown();
+['push','pull','full'].forEach(d => renderDay(d));
+</script>
+</body>
+</html>
